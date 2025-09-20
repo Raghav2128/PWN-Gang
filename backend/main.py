@@ -24,6 +24,8 @@ from schemas import UserCreate, UserResponse, MedicineCreate, MedicineResponse, 
 from auth import verify_password, get_password_hash, create_access_token, verify_token  # auth helpers
 from datetime import timedelta
 import json
+from auth import ACCESS_TOKEN_EXPIRE_MINUTES
+from fastapi.middleware.cors import CORSMiddleware
 
 # Database setup
 
@@ -32,6 +34,14 @@ Base.metadata.create_all(bind=engine)
 
 # Initialize FastAPI app
 app = FastAPI(title="MedShare API", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # allow all origins (fine for hackathon/demo)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Define the security scheme (HTTP Bearer token in headers)
 security = HTTPBearer()
