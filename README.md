@@ -40,12 +40,6 @@ Instead of late-night pharmacy runs or struggling when sick, students can use Pu
 
 ---
 
-## 🌍 Access Pulse  
-
-Pulse will be available online soon
-
----
-
 ## 🎓 Why Pulse?  
 
 Getting sick in college is stressful enough—especially late at night. Pharmacies may be closed, far away, or simply impractical to reach when you’re not feeling well.
