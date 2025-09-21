@@ -26,7 +26,7 @@ Instead of late-night pharmacy runs or struggling when sick, students can use Pu
 
 ## 📸 Preview  
 
-🚀 Coming soon: screenshots of the UI once the frontend is deployed on **Vercel**.  
+🚀 Coming soon: screenshots of the UI
 
 ---
 
@@ -35,15 +35,14 @@ Instead of late-night pharmacy runs or struggling when sick, students can use Pu
 - **Backend**: FastAPI + SQLAlchemy  
 - **Database**: SQLite (dev) → scalable to PostgreSQL  
 - **Authentication**: JWT  
-- **Frontend**: JavaScript (deployed via Vercel)  
+- **Frontend**: JavaScript
 - **Styling**: HTML & CSS  
 
 ---
 
 ## 🌍 Access Pulse  
 
-Pulse will be available online soon via **[Vercel deployment link]**.  
-👉 Stay tuned for the live site.  
+Pulse will be available online soon
 
 ---
 
