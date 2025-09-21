@@ -59,4 +59,5 @@ This makes care:
 - Easier – No more late-night pharmacy trips.
 - Safer – You don’t have to leave your dorm when unwell.
 - Comforting – You know your dorm community has your back.
-- With Pulse, a healthier, more connected campus is only one request away.  
+
+With Pulse, a healthier, more connected campus is only one request away.  
