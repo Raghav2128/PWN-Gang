@@ -56,34 +56,21 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
-# Startup: preload dorm data
-
-@app.on_event("startup")
-def create_sample_data():
-    db = next(get_db())
-    # Only add dorms if none exist yet
-    if not db.query(Dorm).first():
-        dorms = [
-            Dorm(name="North Dorm", location="North Campus"),
-            Dorm(name="South Dorm", location="South Campus"),
-            Dorm(name="East Dorm", location="East Campus"),
-            Dorm(name="West Dorm", location="West Campus"),
-        ]
-        for dorm in dorms:
-            db.add(dorm)
-        db.commit()
-
 # Authentication Endpoints
 
 # Register a new user
 @app.post("/auth/register", response_model=UserResponse)
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
+    # Enforce ASU email domain
+    if not user.email.endswith("@asu.edu"):
+        raise HTTPException(status_code=400, detail="Only @asu.edu emails are allowed")
+
     # Check if user already exists
     db_user = db.query(User).filter(User.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    # Create new user with hashed password
+    # Create new user
     hashed_password = get_password_hash(user.password)
     db_user = User(
         email=user.email,
