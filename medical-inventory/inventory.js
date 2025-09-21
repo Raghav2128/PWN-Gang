@@ -156,15 +156,41 @@ const medicines = [
     renderInventory();
   }
   
-  function saveInventory() {
+  async function saveInventory() {
     if (isSaving) return;
 
     isSaving = true;
     saveBtn.disabled = true;
     saveStatusSpan.textContent = 'Saving...';
 
-    // Simulate save delay
-    setTimeout(() => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        throw new Error('Please login first');
+      }
+
+      // Save each medicine to the backend
+      for (const item of inventory) {
+        const medicineData = {
+          name: item.name,
+          quantity: item.quantity,
+          expiration_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // 1 year from now
+        };
+
+        const response = await fetch('http://localhost:8000/medicines', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(medicineData)
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to save medicine');
+        }
+      }
+
       saveStatusSpan.textContent = '✅ Saved Successfully!';
       isSaving = false;
       saveBtn.disabled = false;
@@ -174,7 +200,16 @@ const medicines = [
       setTimeout(() => {
         saveStatusSpan.textContent = '';
       }, 2000);
-    }, 1500);
+    } catch (error) {
+      console.error('Error saving inventory:', error);
+      saveStatusSpan.textContent = '❌ Save Failed!';
+      isSaving = false;
+      saveBtn.disabled = false;
+      
+      setTimeout(() => {
+        saveStatusSpan.textContent = '';
+      }, 2000);
+    }
   }
   
   function leaveInventory() {

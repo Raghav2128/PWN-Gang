@@ -89,11 +89,13 @@ class Request(Base):
     id = Column(Integer, primary_key=True, index=True)         # request ID
     requester_id = Column(Integer, ForeignKey("users.id"))     # user who made the request
     provider_id = Column(Integer, ForeignKey("users.id"), nullable=True) # user who will fulfill it
+    accepted_by_id = Column(Integer, ForeignKey("users.id"), nullable=True) # user who accepted the request
     medicine_name = Column(String)                             # requested medicine (string version)
     quantity_requested = Column(Integer)                       # how many units requested
     message = Column(Text)                                     # optional message ("I need it for headache")
-    status = Column(String, default="pending")                 # request status: pending, accepted, declined, completed
+    status = Column(String, default="pending")                 # request status: pending, accepted, declined, completed, cancelled
     is_anonymous = Column(Boolean, default=True)               # whether requester is anonymous until accepted
+    chat_room_id = Column(String, nullable=True)               # unique chat room ID for accepted requests
     created_at = Column(DateTime, default=datetime.utcnow)     # timestamp when request was created
     expires_at = Column(DateTime)                              # when request should expire
 
@@ -101,3 +103,4 @@ class Request(Base):
     # Relationships
     requester = relationship("User", foreign_keys=[requester_id], back_populates="requests_sent")
     provider = relationship("User", foreign_keys=[provider_id], back_populates="requests_received")
+    accepted_by = relationship("User", foreign_keys=[accepted_by_id])

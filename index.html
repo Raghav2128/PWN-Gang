@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MedShare - Complete Platform</title>
+    <link rel="stylesheet" href="frontend-pages/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Chatbot specific styles */
+        .chatbot-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 400px;
+            height: 600px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            display: none;
+            flex-direction: column;
+            z-index: 5000;
+            overflow: hidden;
+        }
+
+        .chatbot-container.active {
+            display: flex;
+        }
+
+        .chatbot-header {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #e5e5e5;
+            background: #f8f9fa;
+            justify-content: space-between;
+        }
+
+        .chatbot-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .bot-header-logo {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+        }
+
+        .chatbot-info h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .chatbot-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #666;
+            padding: 5px;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chatbot-close:hover {
+            background: #e5e5e5;
+        }
+
+        .chatbot-chatbox {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .chatbot-message {
+            display: flex;
+            align-items: flex-end;
+            max-width: 80%;
+        }
+
+        .chatbot-message.user {
+            align-self: flex-end;
+        }
+
+        .chatbot-message.bot {
+            align-self: flex-start;
+        }
+
+        .chatbot-message .bot-chat-logo {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            align-self: flex-end;
+            flex-shrink: 0;
+            margin-right: 8px;
+        }
+
+        .chatbot-message .text-bubble {
+            background: #ffffff;
+            padding: 12px 16px;
+            border-radius: 20px;
+            line-height: 1.4;
+            word-wrap: break-word;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+        }
+
+        .chatbot-message.user .text-bubble {
+            background: #007bff;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chatbot-message.bot .text-bubble {
+            background: #e5e5ea;
+            color: #1c1e21;
+            border-bottom-left-radius: 4px;
+        }
+
+        .chatbot-input-area {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            background: #ffffff;
+            border-top: 1px solid #e5e5e5;
+        }
+
+        .chatbot-input {
+            flex-grow: 1;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 25px;
+            font-size: 15px;
+            background: #f0f2f5;
+            outline: none;
+            transition: background-color 0.3s ease;
+        }
+
+        .chatbot-input:focus {
+            background: #e5e7eb;
+        }
+
+        .chatbot-send-btn {
+            background: transparent;
+            color: #007bff;
+            border: none;
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            transition: color 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chatbot-send-btn:disabled {
+            color: #c0c0c0;
+            cursor: not-allowed;
+        }
+
+        .chatbot-send-btn:hover:not(:disabled) {
+            color: #0056b3;
+        }
+
+        .chatbot-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 4000;
+            transition: all 0.3s ease;
+        }
+
+        .chatbot-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .chatbot-toggle.active {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+        }
+
+        /* Responsive chatbot */
+        @media (max-width: 768px) {
+            .chatbot-container {
+                width: calc(100vw - 40px);
+                height: calc(100vh - 40px);
+                bottom: 20px;
+                right: 20px;
+                left: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="main-nav" id="mainNav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <h1>MedShare</h1>
+            </div>
+            <div class="nav-menu" id="navMenu">
+                <button class="nav-btn" onclick="showPage('homepage')">Home</button>
+                <!-- These will be shown based on user state -->
+                <button class="nav-btn hidden" id="setupBtn" onclick="showPage('setup')">Setup</button>
+                <button class="nav-btn hidden" id="mainPageBtn" onclick="showPage('main-page')">Main</button>
+                <button class="nav-btn hidden" id="requestBtn" onclick="showPage('medical-request')">Request Medicine</button>
+                <button class="nav-btn hidden" id="inventoryBtn" onclick="showPage('medical-inventory')">Inventory</button>
+                <button class="nav-btn hidden" id="manageBtn" onclick="showPage('request-page')">Manage Requests</button>
+                <button class="nav-btn hidden" id="logoutBtn" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Homepage Section -->
+    <section id="homepage" class="page-section active">
+        <div class="auth-container">
+            <!-- Brand Panel -->
+            <div class="brand-panel">
+                <div class="brand-content">
+                    <h1>MedShare</h1>
+                    <p>Anonymous medicine sharing platform designed specifically for university students living in dormitories.</p>
+                    
+                    <ul class="features">
+                        <li>100% Anonymous sharing</li>
+                        <li>Secure verification system</li>
+                        <li>Last-minute medicine access</li>
+                        <li>Student-focused community</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Form Panel -->
+            <div class="form-panel">
+                <div class="form-header">
+                    <div class="auth-toggle">
+                        <button class="toggle-btn active" id="loginToggle">Login</button>
+                        <button class="toggle-btn" id="signupToggle">Sign Up</button>
+                    </div>
+                </div>
+
+                <!-- Login Form -->
+                <form class="form" id="loginForm">
+                    <div class="input-group">
+                        <label for="loginEmail">Email Address</label>
+                        <input type="email" id="loginEmail" placeholder="your.email@university.edu" required />
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" placeholder="Enter your password" required />
+                    </div>
+                    
+                    <button type="submit" class="submit-btn">Sign In</button>
+                </form>
+
+                <!-- Signup Form -->
+                <form class="form hidden" id="signupForm">
+                    <div class="input-group">
+                        <label for="signupEmail">ASU Email Address</label>
+                        <input type="email" id="signupEmail" placeholder="your.email@asu.edu" required />
+                    </div>
+                    
+                    <button type="button" class="submit-btn" onclick="handleSignup()">Sign Up</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Page Section -->
+    <section id="main-page" class="page-section">
+        <div class="container">
+            <div class="header">
+                <div class="logo">🏠</div>
+                <h1>Welcome to MedShare</h1>
+                <p class="subtitle">Your medicine sharing platform</p>
+            </div>
+            <div class="main-content">
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h3>📋 Request Medicine</h3>
+                        <p>Request medicines you need from other students</p>
+                        <button class="feature-btn" onclick="checkAuthAndShowPage('medical-request')">Make Request</button>
+                    </div>
+                    <div class="feature-card">
+                        <h3>💊 Manage Inventory</h3>
+                        <p>Add and manage your medicine inventory</p>
+                        <button class="feature-btn" onclick="checkAuthAndShowPage('medical-inventory')">View Inventory</button>
+                    </div>
+                    <div class="feature-card">
+                        <h3>📬 Manage Requests</h3>
+                        <p>View and respond to medicine requests</p>
+                        <button class="feature-btn" onclick="checkAuthAndShowPage('request-page')">View Requests</button>
+                    </div>
+                </div>
+                
+                <!-- Chatbot Info -->
+                <div class="chatbot-info">
+                    <div class="info-card">
+                        <h3>🤖 Need Medical Assistance?</h3>
+                        <p>Click the chatbot button in the bottom-right corner for instant medical advice and help with your health questions.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Setup Section -->
+    <section id="setup" class="page-section">
+        <div class="container">
+            <div class="header">
+                <div class="logo">ASU</div>
+                <h1>Account Registration</h1>
+                <p class="subtitle">Join the Sun Devil community</p>
+            </div>
+
+            <form id="registrationForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="name">Full Name</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">ASU Email Address</label>
+                        <input type="email" id="email" name="email" placeholder="your.email@asu.edu" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone">Phone Number</label>
+                        <input type="tel" id="phone" name="phone" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gender">Gender</label>
+                        <select id="gender" name="gender" required>
+                            <option value="">Select Gender</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="non-binary">Non-binary</option>
+                            <option value="prefer-not-to-say">Prefer not to say</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="age">Age</label>
+                        <input type="number" id="age" name="age" min="16" max="100" required>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="dorm">Select Dorm</label>
+                        <div class="dropdown-container">
+                            <div class="dropdown-input" id="dormDropdown" tabindex="0">Select a dorm...</div>
+                            <div class="dropdown-menu" id="dormMenu">
+                                <input type="text" class="search-input" id="dormSearch" placeholder="Search dorms...">
+                                <div class="dropdown-item" data-value="1">Barrett, The Honors College</div>
+                                <div class="dropdown-item" data-value="2">Hassayampa Academic Village</div>
+                                <div class="dropdown-item" data-value="3">Tooker House</div>
+                                <div class="dropdown-item" data-value="4">San Pablo</div>
+                                <div class="dropdown-item" data-value="5">Sonora Center</div>
+                                <div class="dropdown-item" data-value="6">Vista del Sol</div>
+                                <div class="dropdown-item" data-value="7">Adelphi Commons</div>
+                                <div class="dropdown-item" data-value="8">Best Hall</div>
+                                <div class="dropdown-item" data-value="9">Irish Hall</div>
+                                <div class="dropdown-item" data-value="10">Lawson Hall</div>
+                                <div class="dropdown-item" data-value="11">Papago Park</div>
+                                <div class="dropdown-item" data-value="12">Norte</div>
+                                <div class="dropdown-item" data-value="13">Manzy</div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required>
+                        <div class="password-strength">
+                            <div class="password-strength-bar" id="strengthBar"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm Password</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" required>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="allergies">Allergies</label>
+                        <div class="dropdown-container">
+                            <div class="dropdown-input" id="allergiesDropdown" tabindex="0">Select allergies...</div>
+                            <div class="dropdown-menu" id="allergiesMenu">
+                                <input type="text" class="search-input" id="allergiesSearch" placeholder="Search allergies...">
+                                <div class="dropdown-item" data-value="peanuts">Peanuts</div>
+                                <div class="dropdown-item" data-value="tree-nuts">Tree Nuts</div>
+                                <div class="dropdown-item" data-value="milk">Milk/Dairy</div>
+                                <div class="dropdown-item" data-value="eggs">Eggs</div>
+                                <div class="dropdown-item" data-value="wheat">Wheat/Gluten</div>
+                                <div class="dropdown-item" data-value="soy">Soy</div>
+                                <div class="dropdown-item" data-value="fish">Fish</div>
+                                <div class="dropdown-item" data-value="shellfish">Shellfish</div>
+                                <div class="dropdown-item" data-value="sesame">Sesame</div>
+                                <div class="dropdown-item" data-value="latex">Latex</div>
+                                <div class="dropdown-item" data-value="pollen">Pollen</div>
+                                <div class="dropdown-item" data-value="dust">Dust Mites</div>
+                                <div class="dropdown-item" data-value="pet-dander">Pet Dander</div>
+                                <div class="dropdown-item" data-value="none">No Known Allergies</div>
+                            </div>
+                        </div>
+                        <div class="selected-items" id="selectedAllergies"></div>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="medical">Medical Conditions</label>
+                        <div class="dropdown-container">
+                            <div class="dropdown-input" id="medicalDropdown" tabindex="0">Select conditions...</div>
+                            <div class="dropdown-menu" id="medicalMenu">
+                                <input type="text" class="search-input" id="medicalSearch" placeholder="Search conditions...">
+                                <div class="dropdown-item" data-value="asthma">Asthma</div>
+                                <div class="dropdown-item" data-value="diabetes-t1">Type 1 Diabetes</div>
+                                <div class="dropdown-item" data-value="diabetes-t2">Type 2 Diabetes</div>
+                                <div class="dropdown-item" data-value="epilepsy">Epilepsy</div>
+                                <div class="dropdown-item" data-value="heart-condition">Heart Condition</div>
+                                <div class="dropdown-item" data-value="hypertension">Hypertension</div>
+                                <div class="dropdown-item" data-value="anxiety">Anxiety Disorder</div>
+                                <div class="dropdown-item" data-value="depression">Depression</div>
+                                <div class="dropdown-item" data-value="adhd">ADHD</div>
+                                <div class="dropdown-item" data-value="celiac">Celiac Disease</div>
+                                <div class="dropdown-item" data-value="ibd">Inflammatory Bowel Disease</div>
+                                <div class="dropdown-item" data-value="migraine">Chronic Migraines</div>
+                                <div class="dropdown-item" data-value="thyroid">Thyroid Disorder</div>
+                                <div class="dropdown-item" data-value="none">No Medical Conditions</div>
+                            </div>
+                        </div>
+                        <div class="selected-items" id="selectedMedical"></div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="submit-btn">Register</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- Medical Request Section -->
+    <section id="medical-request" class="page-section">
+        <div class="container">
+            <div class="header">
+                <h1>🏥 Create a Request</h1>
+                <p>Submit your medical request with ease</p>
+            </div>
+            <div class="form-container">
+                <form id="medicalRequestForm">
+                    <div class="form-row">
+                        <div class="form-group full-width search-dropdown-container" style="position: relative">
+                            <label for="medicine">🔍 Search Medicine by Name</label>
+                            <input
+                                type="text"
+                                id="medicine"
+                                class="search-input"
+                                placeholder="Type to search for medicines..."
+                                autocomplete="off"
+                            />
+                            <div id="medicineDropdown" class="dropdown-list"></div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="quantity">📦 Quantity</label>
+                            <input type="number" id="quantity" class="quantity-input" value="1" min="1" max="100" />
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>👨‍⚕️ Preference</label>
+                            <div class="checkbox-group">
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="male" name="preference" />
+                                    <label for="male">Male</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="female" name="preference" />
+                                    <label for="female">Female</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="ca" name="preference" checked />
+                                    <label for="ca">CA</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="urgency">⚡ Urgency Level</label>
+                            <select id="urgency" class="urgency-select">
+                                <option value="low">🟢 Low - Within an Hour</option>
+                                <option value="medium">🟡 Medium - Within 30 Minutes</option>
+                                <option value="high">🟠 High - Within 10 Minutes</option>
+                                <option value="urgent">🔴 Urgent - 5 Minutes</option>
+                                <option value="emergency">🚨 Emergency - Contact a CA or Health Worker</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="text-align: center">
+                        <button type="submit" class="submit-btn">
+                            <span class="icon">📋</span>Submit Request
+                        </button>
+                    </div>
+                    <div style="text-align: center; margin-top: 20px;">
+                        <button type="button" class="exit-btn" onclick="showPage('main-page')">← Back to Main</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Medical Inventory Section -->
+    <section id="medical-inventory" class="page-section">
+        <div class="container">
+            <h1>💊 Enter and Update your Medicines</h1>
+
+            <label for="medicine-select">🔍 Select Medicine to Add:</label>
+            <select id="medicine-select" class="medicine-select">
+                <option value="" selected>Choose a medicine...</option>
+            </select>
+            
+            <div id="custom-medicine-container" class="custom-medicine-container" style="display: none;">
+                <label for="custom-medicine">✏️ Enter Custom Medicine Name:</label>
+                <input type="text" id="custom-medicine" class="custom-medicine-input" placeholder="Type your custom medicine name...">
+            </div>
+            
+            <div id="validation-message" class="validation-message" style="display: none;"></div>
+            
+            <button id="add-btn" class="add-btn">➕ Add to Inventory</button>
+
+            <table class="inventory-table">
+                <thead>
+                    <tr>
+                        <th>❌</th>
+                        <th>Medicine Name</th>
+                        <th>📦 Quantity</th>
+                    </tr>
+                </thead>
+                <tbody id="inventory-body">
+                    <tr id="empty-state">
+                        <td colspan="3" class="empty-state">
+                            💊 No medicines in inventory<br />
+                            Select a medicine above to get started
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="button-container">
+                <button id="save-btn" class="save-btn">💾 Save Inventory</button>
+                <button class="exit-btn" onclick="showPage('main-page')">← Back to Main</button>
+            </div>
+            <span id="save-status" class="save-status"></span>
+        </div>
+    </section>
+
+    <!-- Request Page Section -->
+    <section id="request-page" class="page-section">
+        <div class="container">
+            <h2>Received Requests</h2>
+            <div id="received-requests"></div>
+            <div id="received-empty" class="empty-state" style="display:none;">
+                No received requests at the moment.
+            </div>
+
+            <h2>Your Requests</h2>
+            <div id="my-requests"></div>
+            <div id="my-empty" class="empty-state" style="display:none;">
+                You haven't made any requests.
+            </div>
+            <div style="text-align: center; margin-top: 30px;">
+                <button class="exit-btn" onclick="showPage('main-page')">← Back to Main</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Chatbot Toggle Button -->
+    <button class="chatbot-toggle" id="chatbotToggle" onclick="toggleChatbot()">
+        <i class="fas fa-robot"></i>
+    </button>
+
+    <!-- Chatbot Container -->
+    <div class="chatbot-container" id="chatbotContainer">
+        <div class="chatbot-header">
+            <div class="chatbot-info">
+                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiMwMDdiZmYiLz4KPHN2ZyB4PSI4IiB5PSI4IiB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSI+CjxwYXRoIGQ9Ik04IDJMMTAgNkgxMkwyIDZINUw3IDJaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4KPC9zdmc+" alt="Bot Logo" class="bot-header-logo">
+                <h3>MedShare Bot</h3>
+            </div>
+            <button class="chatbot-close" onclick="toggleChatbot()">&times;</button>
+        </div>
+
+        <div class="chatbot-chatbox" id="chatbotChatbox">
+            <div class="chatbot-message bot">
+                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxNCIgcj0iMTQiIGZpbGw9IiMwMDdiZmYiLz4KPHN2ZyB4PSI3IiB5PSI3IiB3aWR0aD0iMTQiIGhlaWdodD0iMTQiIHZpZXdCb3g9IjAgMCAxNCAxNCIgZmlsbD0ibm9uZSI+CjxwYXRoIGQ9Ik03IDJMMTAgNUgxMkwyIDVINUw3IDJaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4KPC9zdmc+" alt="Bot Logo" class="bot-chat-logo">
+                <div class="text-bubble">
+                    Hello! I'm your MedShare assistant. How can I help you today?
+                </div>
+            </div>
+        </div>
+
+        <div class="chatbot-input-area">
+            <input type="text" id="chatbotInput" class="chatbot-input" placeholder="Type a message..." autocomplete="off">
+            <button id="chatbotSendBtn" class="chatbot-send-btn">
+                <i class="fa-solid fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Popup Modal -->
+    <div id="popupModal" class="popup-modal">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h3 id="popupTitle">Notification</h3>
+                <button class="popup-close" onclick="closePopup()">&times;</button>
+            </div>
+            <div class="popup-body">
+                <p id="popupMessage"></p>
+            </div>
+            <div class="popup-footer">
+                <button class="popup-btn" onclick="closePopup()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="frontend-pages/script.js"></script>
+    <script>
+        // Chatbot functionality
+        let chatbotOpen = false;
+
+        function toggleChatbot() {
+            const container = document.getElementById('chatbotContainer');
+            const toggle = document.getElementById('chatbotToggle');
+            
+            chatbotOpen = !chatbotOpen;
+            
+            if (chatbotOpen) {
+                container.classList.add('active');
+                toggle.classList.add('active');
+                toggle.innerHTML = '<i class="fas fa-times"></i>';
+            } else {
+                container.classList.remove('active');
+                toggle.classList.remove('active');
+                toggle.innerHTML = '<i class="fas fa-robot"></i>';
+            }
+        }
+
+        function appendChatbotMessage(text, sender) {
+            const chatbox = document.getElementById('chatbotChatbox');
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('chatbot-message', sender);
+
+            const textBubble = document.createElement('div');
+            textBubble.classList.add('text-bubble');
+            textBubble.textContent = text;
+
+            if (sender === 'bot') {
+                const iconImg = document.createElement('img');
+                iconImg.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxNCIgcj0iMTQiIGZpbGw9IiMwMDdiZmYiLz4KPHN2ZyB4PSI3IiB5PSI3IiB3aWR0aD0iMTQiIGhlaWdodD0iMTQiIHZpZXdCb3g9IjAgMCAxNCAxNCIgZmlsbD0ibm9uZSI+CjxwYXRoIGQ9Ik03IDJMMTAgNUgxMkwyIDVINUw3IDJaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4KPC9zdmc+';
+                iconImg.classList.add('bot-chat-logo');
+                iconImg.alt = 'bot logo';
+                msgDiv.appendChild(iconImg);
+            }
+
+            msgDiv.appendChild(textBubble);
+            chatbox.appendChild(msgDiv);
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+
+        async function sendChatbotMessage() {
+            const input = document.getElementById('chatbotInput');
+            const sendBtn = document.getElementById('chatbotSendBtn');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            appendChatbotMessage(message, 'user');
+            input.value = '';
+            sendBtn.disabled = true;
+
+            try {
+                const response = await fetch('http://127.0.0.1:8002/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message }),
+                });
+
+                if (!response.ok) throw new Error("Network response was not ok");
+
+                const data = await response.json();
+                appendChatbotMessage(data.reply, 'bot');
+
+            } catch (error) {
+                appendChatbotMessage('Sorry, I\'m having trouble connecting to the server. Please try again later.', 'bot');
+            } finally {
+                sendBtn.disabled = false;
+                input.focus();
+            }
+        }
+
+        // Chatbot event listeners
+        document.getElementById('chatbotSendBtn').addEventListener('click', sendChatbotMessage);
+        document.getElementById('chatbotInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendChatbotMessage();
+        });
+
+        // Close chatbot when clicking outside
+        document.addEventListener('click', function(event) {
+            const container = document.getElementById('chatbotContainer');
+            const toggle = document.getElementById('chatbotToggle');
+            
+            if (chatbotOpen && !container.contains(event.target) && !toggle.contains(event.target)) {
+                toggleChatbot();
+            }
+        });
+    </script>
+</body>
+</html>

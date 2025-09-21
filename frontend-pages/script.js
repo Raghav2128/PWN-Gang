@@ -15,16 +15,9 @@ const medicines = [
     'Levothyroxine', 'Cephalexin', 'Furosemide', 'Clonazepam', 'Oxycodone'
 ];
 
-// Request data
-const receivedRequests = [
-    {id:'req1', medicine:'Paracetamol 500mg', urgency:'high', quantity: 2},
-    {id:'req2', medicine:'Insulin Pen', urgency:'medium', quantity: 1}
-];
-
-const myRequests = [
-    {id:'myreq3', medicine:'Vitamin D Supplements', urgency:'low', status:'Pending', quantity: 1},
-    {id:'myreq4', medicine:'Blood Pressure Monitor', urgency:'medium', status:'Accepted', quantity: 1}
-];
+// Request data - will be loaded from backend
+let receivedRequests = [];
+let myRequests = [];
 
 // Popup functionality
 function showPopup(title, message) {
@@ -91,30 +84,56 @@ function updateSectionNavigation() {
     }
 }
 
+// Check authentication and show page
+function checkAuthAndShowPage(pageId) {
+    const token = localStorage.getItem('auth_token');
+    console.log('Auth check - token:', token ? 'exists' : 'missing');
+    console.log('Auth check - userState:', userState);
+    
+    if (!token || userState !== 'loggedin') {
+        showPopup('Login Required', 'Please login to access this feature.');
+        showPage('homepage');
+        return;
+    }
+    showPage(pageId);
+}
+
 // Page Navigation
 function showPage(pageId) {
-    // Hide all pages with smooth transition
+    // Check if user needs to be logged in for certain pages
+    const protectedPages = ['medical-request', 'medical-inventory', 'request-page'];
+    const token = localStorage.getItem('auth_token');
+    
+    if (protectedPages.includes(pageId) && !token) {
+        showPopup('Login Required', 'Please login to access this page.');
+        showPage('homepage');
+        return;
+    }
+    
+    // Hide all pages immediately
     document.querySelectorAll('.page-section').forEach(page => {
-        if (page.classList.contains('active')) {
-            page.classList.remove('active');
-            // Wait for transition to complete before hiding
-            setTimeout(() => {
-                page.style.display = 'none';
-            }, 400);
-        }
+        page.style.display = 'none';
+        page.classList.remove('active');
+    });
+    
+    // Also hide homepage sections
+    document.querySelectorAll('#homepage .container > div').forEach(section => {
+        section.style.display = 'none';
     });
     
     // Show selected page with smooth transition
     const targetPage = document.getElementById(pageId);
-    targetPage.style.display = 'block';
-    
-    // Force reflow to ensure display change is applied
-    targetPage.offsetHeight;
-    
-    // Add active class for smooth transition
-    setTimeout(() => {
-        targetPage.classList.add('active');
-    }, 10);
+    if (targetPage) {
+        targetPage.style.display = 'block';
+        
+        // Force reflow to ensure display change is applied
+        targetPage.offsetHeight;
+        
+        // Add active class for smooth transition
+        setTimeout(() => {
+            targetPage.classList.add('active');
+        }, 10);
+    }
     
     // Update navigation
     document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -138,12 +157,18 @@ function showPage(pageId) {
     if (pageId === 'medical-inventory') {
         initializeInventory();
     } else if (pageId === 'request-page') {
-        renderRequests();
+        loadRequests().then(() => renderRequests());
     }
 }
 
 // Homepage functionality
 function initializeHomepage() {
+    // Show hero section by default
+    const heroSection = document.querySelector('#homepage .hero');
+    if (heroSection) {
+        heroSection.style.display = 'block';
+    }
+    
     const loginToggle = document.getElementById('loginToggle');
     const signupToggle = document.getElementById('signupToggle');
     const loginForm = document.getElementById('loginForm');
@@ -165,7 +190,7 @@ function initializeHomepage() {
     });
 
     // Login form submission
-    loginForm.addEventListener('submit', (e) => {
+    loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = document.getElementById('loginEmail').value;
         const password = document.getElementById('loginPassword').value;
@@ -175,13 +200,30 @@ function initializeHomepage() {
             return;
         }
 
-        console.log('Login attempt:', { email, password });
-        
-        // Simulate login success
-        userState = 'loggedin';
-        updateNavigation();
-        showPage('main-page');
-        showPopup('Login Successful', 'Welcome back to MedShare!');
+        try {
+            const response = await fetch(`http://localhost:8000/auth/login?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Login failed');
+            }
+
+            const data = await response.json();
+            localStorage.setItem('auth_token', data.access_token);
+            
+            userState = 'loggedin';
+            updateNavigation();
+            showPage('main-page');
+            showPopup('Login Successful', 'Welcome back to MedShare!');
+        } catch (error) {
+            console.error('Login error:', error);
+            showPopup('Login Error', 'Invalid email or password!');
+        }
     });
 
     // Enhanced input interactions
@@ -396,7 +438,7 @@ function initializeSetup() {
     });
 
     // Form submission
-    document.getElementById('registrationForm').addEventListener('submit', function(e) {
+    document.getElementById('registrationForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         
         const formData = new FormData(this);
@@ -418,23 +460,71 @@ function initializeSetup() {
             return;
         }
         
-        data.dorm = dormDropdown.dropdown.dataset.value;
-        data.allergies = Array.from(window.allergiesDropdown.selectedItems);
-        data.medical = Array.from(window.medicalDropdown.selectedItems);
+        if (!validateASUEmail(data.email)) {
+            showPopup('Registration Error', 'Please use a valid ASU email address (must end with @asu.edu)');
+            return;
+        }
         
-        const button = document.querySelector('.submit-btn');
-        button.style.background = 'linear-gradient(135deg, #26de81, #20bf6b)';
-        button.textContent = 'Registration Successful!';
-        
-        console.log('Registration Data:', data);
-        
-        // Complete registration and move to logged in state
-        setTimeout(() => {
-            userState = 'loggedin';
-            updateNavigation();
-            showPage('main-page');
-            showPopup('Registration Complete', 'Welcome to MedCare! Your account has been created successfully.');
-        }, 1000);
+        try {
+            const registrationData = {
+                email: data.email,
+                password: data.password,
+                first_name: data.name.split(' ')[0] || data.name,
+                last_name: data.name.split(' ').slice(1).join(' ') || '',
+                dorm_id: parseInt(dormDropdown.dropdown.dataset.value),
+                medical_conditions: JSON.stringify(Array.from(window.medicalDropdown.selectedItems)),
+                allergies: JSON.stringify(Array.from(window.allergiesDropdown.selectedItems))
+            };
+
+            const response = await fetch('http://localhost:8000/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(registrationData)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('Server error response:', errorData);
+                if (errorData.detail) {
+                    if (Array.isArray(errorData.detail)) {
+                        throw new Error(errorData.detail.map(err => err.msg || err).join(', '));
+                    } else {
+                        throw new Error(errorData.detail);
+                    }
+                } else {
+                    throw new Error(`Registration failed with status ${response.status}`);
+                }
+            }
+
+            const result = await response.json();
+            
+            const button = document.querySelector('.submit-btn');
+            button.style.background = 'linear-gradient(135deg, #26de81, #20bf6b)';
+            button.textContent = 'Registration Successful!';
+            
+            console.log('Registration Data:', result);
+            
+            // Complete registration and move to logged in state
+            setTimeout(() => {
+                userState = 'loggedin';
+                updateNavigation();
+                showPage('main-page');
+                showPopup('Registration Complete', 'Welcome to MedCare! Your account has been created successfully.');
+            }, 1000);
+        } catch (error) {
+            console.error('Registration error:', error);
+            let errorMessage = 'Registration failed. Please try again.';
+            if (error.message) {
+                errorMessage = error.message;
+            } else if (typeof error === 'string') {
+                errorMessage = error;
+            } else if (error.detail) {
+                errorMessage = error.detail;
+            }
+            showPopup('Registration Error', errorMessage);
+        }
     });
 
     // Phone number formatting
@@ -572,7 +662,7 @@ function initializeMedicalRequest() {
         }
     });
 
-    form.addEventListener('submit', function (e) {
+    form.addEventListener('submit', async function (e) {
         e.preventDefault();
         const originalText = submitBtn.innerHTML;
 
@@ -581,16 +671,63 @@ function initializeMedicalRequest() {
         submitBtn.prepend(iconSpan);
         submitBtn.disabled = true;
 
-        setTimeout(() => {
+        try {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                throw new Error('Please login first');
+            }
+
+            const medicineName = document.getElementById('medicine').value;
+            const quantity = document.getElementById('quantity').value;
+            const urgency = document.getElementById('urgency').value;
+
+            if (!medicineName) {
+                throw new Error('Please select a medicine');
+            }
+
+            const requestData = {
+                medicine_name: medicineName,
+                quantity_requested: parseInt(quantity),
+                message: `Urgency: ${urgency}`
+            };
+
+            const response = await fetch('http://localhost:8000/requests', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(requestData)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || 'Failed to create request');
+            }
+
             iconSpan.textContent = '✅';
             submitBtn.textContent = ' Request Submitted!';
             submitBtn.prepend(iconSpan);
+
+            // Clear the form
+            document.getElementById('medicine').value = '';
+            document.getElementById('quantity').value = '1';
 
             setTimeout(() => {
                 submitBtn.innerHTML = originalText;
                 submitBtn.disabled = false;
             }, 2000);
-        }, 2000);
+
+        } catch (error) {
+            iconSpan.textContent = '❌';
+            submitBtn.textContent = ' Error: ' + error.message;
+            submitBtn.prepend(iconSpan);
+
+            setTimeout(() => {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }, 3000);
+        }
     });
 }
 
@@ -794,6 +931,34 @@ function initializeInventory() {
 }
 
 // Request Page functionality
+async function loadRequests() {
+    try {
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+            console.log('No auth token found');
+            return;
+        }
+
+        const response = await fetch('http://localhost:8000/requests', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const requests = await response.json();
+            // For now, show all requests as received requests
+            // In a real app, you'd filter by user and dorm
+            receivedRequests = requests;
+            myRequests = []; // You'd load user's own requests separately
+        } else {
+            console.error('Failed to load requests');
+        }
+    } catch (error) {
+        console.error('Error loading requests:', error);
+    }
+}
+
 function renderRequests() {
     const receivedDiv = document.getElementById('received-requests');
     const myDiv = document.getElementById('my-requests');
@@ -802,11 +967,12 @@ function renderRequests() {
 
     receivedRequests.forEach(req=>{
         const card = document.createElement('div');
-        card.className = `request-card ${req.urgency}`;
+        card.className = `request-card ${req.urgency || 'medium'}`;
         card.innerHTML = `
-            <p><b>${req.medicine}</b></p>
-            <p>Urgency: ${req.urgency}</p>
-            <p>Quantity: ${req.quantity}</p>
+            <p><b>${req.medicine_name}</b></p>
+            <p>Quantity: ${req.quantity_requested}</p>
+            <p>Status: ${req.status || 'pending'}</p>
+            ${req.message ? `<p>Message: ${req.message}</p>` : ''}
             <div class="buttons">
                 <button class="accept" onclick="acceptRequest('${req.id}')">Accept</button>
                 <button class="decline" onclick="declineRequest('${req.id}')">Decline</button>
@@ -817,12 +983,12 @@ function renderRequests() {
 
     myRequests.forEach(req=>{
         const card = document.createElement('div');
-        card.className = `request-card ${req.urgency}`;
+        card.className = `request-card ${req.urgency || 'medium'}`;
         card.innerHTML = `
-            <p><b>${req.medicine}</b></p>
-            <p>Urgency: ${req.urgency}</p>
+            <p><b>${req.medicine_name}</b></p>
+            <p>Quantity: ${req.quantity_requested}</p>
             <p>Status: ${req.status}</p>
-            <p>Quantity: ${req.quantity}</p>
+            ${req.message ? `<p>Message: ${req.message}</p>` : ''}
             <div class="buttons">
                 <button class="cancel" onclick="cancelRequest('${req.id}')">Cancel</button>
             </div>
@@ -833,25 +999,107 @@ function renderRequests() {
     checkEmptyStates();
 }
 
-function acceptRequest(id){
-    showToast('Accept button clicked - placeholder functionality');
-}
+async function acceptRequest(id){
+    try {
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+            showToast('Please login first');
+            return;
+        }
 
-function declineRequest(id){
-    showToast('Request declined');
-    const index = receivedRequests.findIndex(r => r.id === id);
-    if (index > -1) {
-        receivedRequests.splice(index, 1);
-        renderRequests();
+        const response = await fetch(`http://localhost:8000/requests/${id}/accept`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to accept request');
+        }
+
+        const result = await response.json();
+        
+        // Remove the request from the list
+        const index = receivedRequests.findIndex(r => r.id === id);
+        if (index > -1) {
+            receivedRequests.splice(index, 1);
+            renderRequests();
+        }
+
+        // Open the chat room in a new tab
+        window.open(result.chat_room_url, '_blank');
+        
+        showToast('Request accepted! Chat room opened.');
+    } catch (error) {
+        console.error('Error accepting request:', error);
+        showToast('Error accepting request');
     }
 }
 
-function cancelRequest(id){
-    showToast('Request canceled');
-    const index = myRequests.findIndex(r => r.id === id);
-    if (index > -1) {
-        myRequests.splice(index, 1);
-        renderRequests();
+async function declineRequest(id){
+    try {
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+            showToast('Please login first');
+            return;
+        }
+
+        const response = await fetch(`http://localhost:8000/requests/${id}/decline`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to decline request');
+        }
+
+        // Remove the request from the list
+        const index = receivedRequests.findIndex(r => r.id === id);
+        if (index > -1) {
+            receivedRequests.splice(index, 1);
+            renderRequests();
+        }
+        
+        showToast('Request declined');
+    } catch (error) {
+        console.error('Error declining request:', error);
+        showToast('Error declining request');
+    }
+}
+
+async function cancelRequest(id){
+    try {
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+            showToast('Please login first');
+            return;
+        }
+
+        const response = await fetch(`http://localhost:8000/requests/${id}/cancel`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to cancel request');
+        }
+
+        // Remove the request from the list
+        const index = myRequests.findIndex(r => r.id === id);
+        if (index > -1) {
+            myRequests.splice(index, 1);
+            renderRequests();
+        }
+        
+        showToast('Request canceled');
+    } catch (error) {
+        console.error('Error canceling request:', error);
+        showToast('Error canceling request');
     }
 }
 
@@ -879,11 +1127,37 @@ function logout() {
 
 
 
+// Check if user is already logged in
+function checkExistingAuth() {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+        userState = 'loggedin';
+        updateNavigation();
+        console.log('User already logged in, token found');
+    } else {
+        console.log('No existing auth token found');
+    }
+}
+
 // Initialize everything when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+    checkExistingAuth();
     initializeHomepage();
     initializeSetup();
     initializeMedicalRequest();
     renderRequests();
     updateNavigation();
+    
+    // Show homepage by default
+    showPage('homepage');
+    
+    // Make sure navigation buttons work
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Remove active class from all buttons
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            // Add active class to clicked button
+            this.classList.add('active');
+        });
+    });
 });

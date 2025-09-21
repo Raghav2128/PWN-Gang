@@ -2,7 +2,9 @@ let $ = jQuery;
 let socket;
 
 function initializeWebSocket() {
-  socket = new WebSocket('ws://localhost:8000/message');
+  // Use room-specific WebSocket if roomId is available
+  const wsUrl = roomId ? `ws://localhost:8001/message/${roomId}` : 'ws://localhost:8001/message';
+  socket = new WebSocket(wsUrl);
 
   socket.onopen = function (event) {
     console.log('WebSocket connection established.');

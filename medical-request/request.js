@@ -92,23 +92,78 @@ const medicines = [
     }
   });
   
-  form.addEventListener('submit', function (e) {
+  form.addEventListener('submit', async function (e) {
     e.preventDefault();
     const originalText = submitBtn.innerHTML;
-  
+
     iconSpan.textContent = '⏳';
     submitBtn.textContent = ' Processing...';
     submitBtn.prepend(iconSpan);
     submitBtn.disabled = true;
-  
-    setTimeout(() => {
+
+    try {
+      // Get form data
+      const medicineName = medicineInput.value;
+      const quantity = document.getElementById('quantity').value;
+      const urgency = document.getElementById('urgency').value;
+      
+      // Get selected preferences
+      const preferences = [];
+      document.querySelectorAll('input[name="preference"]:checked').forEach(checkbox => {
+        preferences.push(checkbox.id);
+      });
+
+      // Create request data
+      const requestData = {
+        medicine_name: medicineName,
+        quantity_requested: parseInt(quantity),
+        message: `Urgency: ${urgency}, Preferences: ${preferences.join(', ')}`
+      };
+
+      // Get auth token from localStorage
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        throw new Error('Please login first');
+      }
+
+      // Submit request to backend
+      const response = await fetch('http://localhost:8000/requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(requestData)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit request');
+      }
+
+      const result = await response.json();
+      
       iconSpan.textContent = '✅';
       submitBtn.textContent = ' Request Submitted!';
       submitBtn.prepend(iconSpan);
-  
+
+      // Reset form
+      form.reset();
+      medicineInput.value = '';
+
       setTimeout(() => {
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
       }, 2000);
-    }, 2000);
+
+    } catch (error) {
+      console.error('Error submitting request:', error);
+      iconSpan.textContent = '❌';
+      submitBtn.textContent = ' Error!';
+      submitBtn.prepend(iconSpan);
+
+      setTimeout(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+      }, 2000);
+    }
   });

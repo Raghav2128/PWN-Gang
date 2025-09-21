@@ -32,6 +32,44 @@ from fastapi.middleware.cors import CORSMiddleware
 # Automatically create all database tables defined in models.py
 Base.metadata.create_all(bind=engine)
 
+# Create sample dorms if they don't exist
+def create_sample_dorms():
+    from database import SessionLocal
+    db = SessionLocal()
+    try:
+        # Check if dorms already exist
+        if db.query(Dorm).count() == 0:
+            sample_dorms = [
+                {"id": 1, "name": "Barrett, The Honors College", "location": "Tempe Campus"},
+                {"id": 2, "name": "Hassayampa Academic Village", "location": "Tempe Campus"},
+                {"id": 3, "name": "Tooker House", "location": "Tempe Campus"},
+                {"id": 4, "name": "San Pablo", "location": "Tempe Campus"},
+                {"id": 5, "name": "Sonora Center", "location": "Tempe Campus"},
+                {"id": 6, "name": "Vista del Sol", "location": "Tempe Campus"},
+                {"id": 7, "name": "Adelphi Commons", "location": "Tempe Campus"},
+                {"id": 8, "name": "Best Hall", "location": "Tempe Campus"},
+                {"id": 9, "name": "Irish Hall", "location": "Tempe Campus"},
+                {"id": 10, "name": "Lawson Hall", "location": "Tempe Campus"},
+                {"id": 11, "name": "Papago Park", "location": "Tempe Campus"},
+                {"id": 12, "name": "Norte", "location": "Tempe Campus"},
+                {"id": 13, "name": "Manzy", "location": "Tempe Campus"},
+            ]
+            
+            for dorm_data in sample_dorms:
+                dorm = Dorm(id=dorm_data["id"], name=dorm_data["name"], location=dorm_data["location"])
+                db.add(dorm)
+            
+            db.commit()
+            print("Sample dorms created successfully!")
+    except Exception as e:
+        print(f"Error creating sample dorms: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+# Create sample dorms on startup
+create_sample_dorms()
+
 # Initialize FastAPI app
 app = FastAPI(title="MedShare API", version="1.0.0")
 
@@ -177,6 +215,67 @@ def create_request(request: RequestCreate, current_user: User = Depends(get_curr
 @app.get("/requests", response_model=list[RequestResponse])
 def get_requests(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return db.query(Request).join(User, Request.requester_id == User.id).filter(User.dorm_id == current_user.dorm_id).all()
+
+# Accept a medical request
+@app.post("/requests/{request_id}/accept")
+def accept_request(request_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Get the request
+    request = db.query(Request).filter(Request.id == request_id).first()
+    if not request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    # Check if user is in the same dorm as requester
+    requester = db.query(User).filter(User.id == request.requester_id).first()
+    if not requester or requester.dorm_id != current_user.dorm_id:
+        raise HTTPException(status_code=403, detail="You can only accept requests from your dorm")
+    
+    # Generate a unique chat room URL
+    import uuid
+    chat_room_id = str(uuid.uuid4())
+    
+    # Update request status
+    request.status = "accepted"
+    request.accepted_by_id = current_user.id
+    request.chat_room_id = chat_room_id
+    db.commit()
+    
+    return {
+        "message": "Request accepted successfully",
+        "chat_room_url": f"http://localhost:8001/chat/{chat_room_id}",
+        "chat_room_id": chat_room_id
+    }
+
+# Decline a medical request
+@app.post("/requests/{request_id}/decline")
+def decline_request(request_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    request = db.query(Request).filter(Request.id == request_id).first()
+    if not request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    # Check if user is in the same dorm as requester
+    requester = db.query(User).filter(User.id == request.requester_id).first()
+    if not requester or requester.dorm_id != current_user.dorm_id:
+        raise HTTPException(status_code=403, detail="You can only decline requests from your dorm")
+    
+    # Update request status
+    request.status = "declined"
+    request.accepted_by_id = current_user.id
+    db.commit()
+    
+    return {"message": "Request declined"}
+
+# Cancel a medical request
+@app.post("/requests/{request_id}/cancel")
+def cancel_request(request_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    request = db.query(Request).filter(Request.id == request_id, Request.requester_id == current_user.id).first()
+    if not request:
+        raise HTTPException(status_code=404, detail="Request not found or you don't have permission to cancel it")
+    
+    # Update request status
+    request.status = "cancelled"
+    db.commit()
+    
+    return {"message": "Request cancelled"}
 
 # RUN APP (when executed directly)
 
