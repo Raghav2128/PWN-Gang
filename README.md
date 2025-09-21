@@ -40,6 +40,12 @@ Instead of late-night pharmacy runs or struggling when sick, students can use Pu
 
 ---
 
+## 🏗️ Architecture
+
+🚀 Coming soon: screenshots of the Architecture that shows the brain behind **Pulse**.
+
+---
+
 ## 🌍 Access Pulse  
 
 Pulse will be available online soon via **[Vercel deployment link]**.  
