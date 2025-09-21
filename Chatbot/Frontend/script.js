@@ -2,26 +2,30 @@ const inputMessage = document.getElementById("inputMessage");
 const sendBtn = document.getElementById("sendBtn");
 const chatbox = document.getElementById("chatbox");
 
+// Add welcome message when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    appendMessage("Hello! I'm your medical assistant. How can I help you today?", "bot");
+});
 
-function appendMessage(text,sender){
-    const msgDiv =document.createElement("div");
-    msgDiv.classList.add("message",sender);
+function appendMessage(text, sender) {
+    const msgDiv = document.createElement("div");
+    msgDiv.classList.add("message", sender);
 
-    const textBubble=document.createElement("span");
+    const textBubble = document.createElement("span");
     textBubble.classList.add("text-bubble");
-    textBubble.textContent=text;
+    textBubble.textContent = text;
 
-    if(sender=="bot"){
-        const iconImg=document.createElement("img");
-        iconImg.src="logo.jpg"
+    if (sender == "bot") {
+        const iconImg = document.createElement("img");
+        iconImg.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxNCIgcj0iMTQiIGZpbGw9IiMwMDdiZmYiLz4KPHN2ZyB4PSI3IiB5PSI3IiB3aWR0aD0iMTQiIGhlaWdodD0iMTQiIHZpZXdCb3g9IjAgMCAxNCAxNCIgZmlsbD0ibm9uZSI+CjxwYXRoIGQ9Ik03IDFMMTAgNEgxMkwyIDRINUw3IDFaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4KPC9zdmc+";
         iconImg.classList.add("bot-chat-logo");
-        iconImg.alt="bot logo";
+        iconImg.alt = "bot logo";
         msgDiv.appendChild(iconImg);
     }
 
     msgDiv.appendChild(textBubble);
     chatbox.appendChild(msgDiv);
-    chatbox.scrollTop=chatbox.scrollHeight;
+    chatbox.scrollTop = chatbox.scrollHeight;
 }
 
 
@@ -49,7 +53,7 @@ async function sendMessage(){
         appendMessage(data.reply,"bot")
 
     } catch (error) {
-        appendMessage('Error: Could not reach the server.','bot');
+        appendMessage('Sorry, I am currently unavailable. Please try again later.','bot');
     } finally{
         sendBtn.disabled=false;
         inputMessage.focus();

@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <!-- Title of the webpage shown on the browser tab -->
-    <title>Bot Chat</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedShare - Medical Assistant Bot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
     <!-- Link to external CSS stylesheet  -->
     <link rel="stylesheet" href="style.css" />
@@ -16,16 +16,27 @@
     />
 </head>
 <body>
-    <!-- Main container holding all chat elements -->
-    <div class="container">c
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <h1>MedShare</h1>
+            </div>
+            <div class="nav-menu">
+                <button class="nav-btn" onclick="window.close()">← Back to Main</button>
+            </div>
+        </div>
+    </nav>
 
+    <!-- Main container holding all chat elements -->
+    <div class="container">
         <!-- Header section of the chat -->
         <header class="chat-header">
             <div class="bot-info">
                 <!-- Logo image for the bot -->
                 <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiMwMDdiZmYiLz4KPHN2ZyB4PSI4IiB5PSI4IiB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSI+CjxwYXRoIGQ9Ik04IDJMMTAgNkgxMkwyIDZINUw3IDJaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4KPC9zdmc+" alt="Bot Logo" class="bot-header-logo">
                 <!-- Bot title -->
-                <h3>Chat Bot</h3>
+                <h3>Medical Assistant Bot</h3>
             </div>
         </header>
 
