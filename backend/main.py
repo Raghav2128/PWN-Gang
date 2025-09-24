@@ -1,7 +1,7 @@
 """
 main.py
 --------
-This is the main entry point for the MedShare API.
+This is the main entry point for the Pulse API.
 
 Features:
 - User authentication (register/login with JWT)
@@ -18,7 +18,7 @@ Security:
 from fastapi import FastAPI, Depends, HTTPException, status   # FastAPI core tools
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials # for JWT auth via "Bearer <token>"
 from sqlalchemy.orm import Session                            # database session
-from database import get_db, engine, Base                     # our DB setup
+from database import get_db, engine, Base, SessionLocal       # our DB setup
 from models import User, Dorm, Medicine, Request              # database models (tables)
 from schemas import UserCreate, UserResponse, MedicineCreate, MedicineResponse, RequestCreate, RequestResponse, DormResponse
 from auth import verify_password, get_password_hash, create_access_token, verify_token  # auth helpers
@@ -32,8 +32,41 @@ from fastapi.middleware.cors import CORSMiddleware
 # Automatically create all database tables defined in models.py
 Base.metadata.create_all(bind=engine)
 
+# Create sample dorms
+def create_sample_dorms():
+    db = SessionLocal()
+    try:
+        if db.query(Dorm).count() == 0:
+            sample_dorms = [
+                {"id": 1, "name": "Sunset Heights", "location": "North Campus"},
+                {"id": 2, "name": "Mountain View", "location": "South Campus"},
+                {"id": 3, "name": "Riverside Commons", "location": "East Campus"},
+                {"id": 4, "name": "Garden Plaza", "location": "West Campus"},
+                {"id": 5, "name": "Skyline Tower", "location": "Central Campus"},
+                {"id": 6, "name": "Valley Ridge", "location": "North Campus"},
+                {"id": 7, "name": "Pine Grove", "location": "South Campus"},
+                {"id": 8, "name": "Oak Manor", "location": "East Campus"},
+                {"id": 9, "name": "Cedar Hall", "location": "West Campus"},
+                {"id": 10, "name": "Maple Court", "location": "Central Campus"},
+                {"id": 11, "name": "Elm Gardens", "location": "North Campus"},
+                {"id": 12, "name": "Birch Commons", "location": "South Campus"},
+                {"id": 13, "name": "Willow House", "location": "East Campus"},
+            ]
+            for dorm_data in sample_dorms:
+                dorm = Dorm(id=dorm_data["id"], name=dorm_data["name"], location=dorm_data["location"])
+                db.add(dorm)
+            db.commit()
+            print("Sample dorms created successfully!")
+    except Exception as e:
+        print(f"Error creating sample dorms: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+create_sample_dorms()
+
 # Initialize FastAPI app
-app = FastAPI(title="MedShare API", version="1.0.0")
+app = FastAPI(title="Pulse API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
