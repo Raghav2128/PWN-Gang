@@ -15,16 +15,21 @@ const medicines = [
     'Levothyroxine', 'Cephalexin', 'Furosemide', 'Clonazepam', 'Oxycodone'
 ];
 
-// Request data
-const receivedRequests = [
-    {id:'req1', medicine:'Paracetamol 500mg', urgency:'high', quantity: 2},
-    {id:'req2', medicine:'Insulin Pen', urgency:'medium', quantity: 1}
-];
+// Request data - will be loaded from backend
+let receivedRequests = [];
+let myRequests = [];
 
-const myRequests = [
-    {id:'myreq3', medicine:'Vitamin D Supplements', urgency:'low', status:'Pending', quantity: 1},
-    {id:'myreq4', medicine:'Blood Pressure Monitor', urgency:'medium', status:'Accepted', quantity: 1}
-];
+
+// Pre-existing pending request entry
+const pendingRequest = {
+    id: 'pending-001',
+    medicine: 'Ibuprofen',
+    quantity: 2,
+    urgency: 'medium',
+    timestamp: new Date().toISOString(),
+    requester: 'Anonymous Student',
+    status: 'pending'
+};
 
 // Popup functionality
 function showPopup(title, message) {
@@ -39,6 +44,7 @@ function closePopup() {
 
 // Navigation state management
 function updateNavigation() {
+    const mainNav = document.getElementById('mainNav');
     const navButtons = {
         setupBtn: document.getElementById('setupBtn'),
         mainPageBtn: document.getElementById('mainPageBtn'),
@@ -55,13 +61,18 @@ function updateNavigation() {
 
     // Show buttons based on user state
     if (userState === 'signup') {
+        if (mainNav) mainNav.classList.remove('hidden');
         navButtons.setupBtn?.classList.remove('hidden');
         navButtons.logoutBtn?.classList.remove('hidden');
     } else if (userState === 'loggedin') {
+        if (mainNav) mainNav.classList.remove('hidden');
         navButtons.mainPageBtn?.classList.remove('hidden');
         navButtons.logoutBtn?.classList.remove('hidden');
         // Other buttons will be shown/hidden based on current page
         updateSectionNavigation();
+    } else {
+        // Hide navbar for guests
+        if (mainNav) mainNav.classList.add('hidden');
     }
 }
 
@@ -138,12 +149,19 @@ function showPage(pageId) {
     if (pageId === 'medical-inventory') {
         initializeInventory();
     } else if (pageId === 'request-page') {
-        renderRequests();
+        loadRequests().then(() => renderRequests());
     }
 }
 
 // Homepage functionality
 function initializeHomepage() {
+    // Reset registration button text
+    const submitBtn = document.querySelector('.submit-btn');
+    if (submitBtn) {
+        submitBtn.textContent = 'Sign Up';
+        submitBtn.style.background = '';
+    }
+    
     const loginToggle = document.getElementById('loginToggle');
     const signupToggle = document.getElementById('signupToggle');
     const loginForm = document.getElementById('loginForm');
@@ -181,7 +199,7 @@ function initializeHomepage() {
         userState = 'loggedin';
         updateNavigation();
         showPage('main-page');
-        showPopup('Login Successful', 'Welcome back to MedShare!');
+        showPopup('Login Successful', 'Welcome back to Pulse!');
     });
 
     // Enhanced input interactions
@@ -433,7 +451,7 @@ function initializeSetup() {
             userState = 'loggedin';
             updateNavigation();
             showPage('main-page');
-            showPopup('Registration Complete', 'Welcome to MedCare! Your account has been created successfully.');
+            showPopup('Registration Complete', 'Welcome to Pulse! Your account has been created successfully.');
         }, 1000);
     });
 
@@ -574,6 +592,17 @@ function initializeMedicalRequest() {
 
     form.addEventListener('submit', function (e) {
         e.preventDefault();
+        
+        // Get form data
+        const medicine = document.getElementById('medicine').value;
+        const quantity = document.getElementById('quantity').value;
+        const urgency = document.getElementById('urgency').value;
+        
+        if (!medicine) {
+            showPopup('Error', 'Please select a medicine!');
+            return;
+        }
+        
         const originalText = submitBtn.innerHTML;
 
         iconSpan.textContent = '⏳';
@@ -582,6 +611,22 @@ function initializeMedicalRequest() {
         submitBtn.disabled = true;
 
         setTimeout(() => {
+            // Create new request object
+            const newRequest = {
+                id: Date.now().toString(), // Simple ID generation
+                medicine: medicine,
+                quantity: quantity,
+                urgency: urgency,
+                status: 'pending',
+                timestamp: new Date().toLocaleString()
+            };
+            
+            // Add to myRequests array
+            myRequests.push(newRequest);
+            
+            // Store in localStorage for persistence
+            localStorage.setItem('myRequests', JSON.stringify(myRequests));
+            
             iconSpan.textContent = '✅';
             submitBtn.textContent = ' Request Submitted!';
             submitBtn.prepend(iconSpan);
@@ -589,6 +634,13 @@ function initializeMedicalRequest() {
             setTimeout(() => {
                 submitBtn.innerHTML = originalText;
                 submitBtn.disabled = false;
+                
+                // Clear the form
+                form.reset();
+                document.getElementById('medicine').value = '';
+                
+                // Show success message
+                showPopup('Success', 'Your medicine request has been submitted successfully!');
             }, 2000);
         }, 2000);
     });
@@ -793,6 +845,40 @@ function initializeInventory() {
     });
 }
 
+// Load requests from backend and localStorage
+async function loadRequests() {
+    try {
+        // Load my requests from localStorage
+        const savedRequests = localStorage.getItem('myRequests');
+        if (savedRequests) {
+            myRequests = JSON.parse(savedRequests);
+        }
+        
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+            console.log('No auth token found');
+            return;
+        }
+
+        const response = await fetch('http://localhost:8000/requests', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const requests = await response.json();
+            // For now, show all requests as received requests
+            // In a real app, you'd filter by user and dorm
+            receivedRequests = requests;
+        } else {
+            console.error('Failed to load requests');
+        }
+    } catch (error) {
+        console.error('Error loading requests:', error);
+    }
+}
+
 // Request Page functionality
 function renderRequests() {
     const receivedDiv = document.getElementById('received-requests');
@@ -800,13 +886,30 @@ function renderRequests() {
     receivedDiv.innerHTML = '';
     myDiv.innerHTML = '';
 
+    // Add pre-existing pending request
+    const pendingCard = document.createElement('div');
+    pendingCard.id = `request-${pendingRequest.id}`;
+    pendingCard.className = `request-card ${pendingRequest.urgency}`;
+    pendingCard.innerHTML = `
+        <p><b>${pendingRequest.medicine}</b></p>
+        <p>Quantity: ${pendingRequest.quantity}</p>
+        <p>Status: ${pendingRequest.status}</p>
+        <p>Requester: ${pendingRequest.requester}</p>
+        <div class="buttons">
+            <button class="accept" onclick="acceptMeeting('${pendingRequest.id}')">Accept & Chat</button>
+            <button class="decline" onclick="declineMeeting('${pendingRequest.id}')">Decline</button>
+        </div>
+    `;
+    receivedDiv.appendChild(pendingCard);
+
     receivedRequests.forEach(req=>{
         const card = document.createElement('div');
-        card.className = `request-card ${req.urgency}`;
+        card.className = `request-card ${req.urgency || 'medium'}`;
         card.innerHTML = `
-            <p><b>${req.medicine}</b></p>
-            <p>Urgency: ${req.urgency}</p>
-            <p>Quantity: ${req.quantity}</p>
+            <p><b>${req.medicine_name}</b></p>
+            <p>Quantity: ${req.quantity_requested}</p>
+            <p>Status: ${req.status || 'pending'}</p>
+            ${req.message ? `<p>Message: ${req.message}</p>` : ''}
             <div class="buttons">
                 <button class="accept" onclick="acceptRequest('${req.id}')">Accept</button>
                 <button class="decline" onclick="declineRequest('${req.id}')">Decline</button>
@@ -837,12 +940,32 @@ function acceptRequest(id){
     showToast('Accept button clicked - placeholder functionality');
 }
 
-function declineRequest(id){
-    showToast('Request declined');
-    const index = receivedRequests.findIndex(r => r.id === id);
-    if (index > -1) {
-        receivedRequests.splice(index, 1);
-        renderRequests();
+async function declineRequest(id){
+    try {
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+            showToast('Please login first');
+            return;
+        }
+
+        const response = await fetch(`http://localhost:8000/requests/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            showToast('Request declined');
+            // Reload requests from backend
+            await loadRequests();
+            renderRequests();
+        } else {
+            showToast('Failed to decline request');
+        }
+    } catch (error) {
+        console.error('Error declining request:', error);
+        showToast('Error declining request');
     }
 }
 
@@ -851,6 +974,8 @@ function cancelRequest(id){
     const index = myRequests.findIndex(r => r.id === id);
     if (index > -1) {
         myRequests.splice(index, 1);
+        // Update localStorage
+        localStorage.setItem('myRequests', JSON.stringify(myRequests));
         renderRequests();
     }
 }
@@ -868,11 +993,122 @@ function showToast(msg){
 }
 
 
+// Chatbot functionality
+function openChatbot() {
+    document.getElementById('chatbotModal').style.display = 'block';
+    // Focus on input when modal opens
+    setTimeout(() => {
+        document.getElementById('inputMessage').focus();
+    }, 100);
+}
+
+function closeChatbot() {
+    document.getElementById('chatbotModal').style.display = 'none';
+}
+
+// Chatbot message functions
+function appendMessage(text, sender) {
+    const chatbox = document.getElementById('chatbox');
+    const msgDiv = document.createElement('div');
+    msgDiv.classList.add('message', sender);
+
+    const textBubble = document.createElement('span');
+    textBubble.classList.add('text-bubble');
+    textBubble.textContent = text;
+
+    if (sender === 'bot') {
+        const iconImg = document.createElement('img');
+        iconImg.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTQiIGN5PSIxNCIgcj0iMTQiIGZpbGw9IiMwMDdiZmYiLz4KPHN2ZyB4PSI3IiB5PSI3IiB3aWR0aD0iMTQiIGhlaWdodD0iMTQiIHZpZXdCb3g9IjAgMCAxNCAxNCIgZmlsbD0ibm9uZSI+CjxwYXRoIGQ9Ik03IDJMMTAgNUgxMkwyIDVINUw3IDJaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4KPC9zdmc+";
+        iconImg.classList.add('bot-chat-logo');
+        iconImg.alt = 'bot logo';
+        msgDiv.appendChild(iconImg);
+    }
+
+    msgDiv.appendChild(textBubble);
+    chatbox.appendChild(msgDiv);
+    chatbox.scrollTop = chatbox.scrollHeight;
+}
+
+async function sendMessage() {
+    const inputMessage = document.getElementById('inputMessage');
+    const sendBtn = document.getElementById('sendBtn');
+    const message = inputMessage.value.trim();
+
+    if (!message) return;
+    
+    appendMessage(message, 'user');
+    inputMessage.value = '';
+    sendBtn.disabled = true;
+
+    try {
+        const response = await fetch('http://127.0.0.1:8002/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message }),
+        });
+
+        if (!response.ok) throw new Error("Network response was not ok");
+
+        const data = await response.json();
+        appendMessage(data.reply, 'bot');
+
+    } catch (error) {
+        appendMessage('Error: Could not reach the server.', 'bot');
+    } finally {
+        sendBtn.disabled = false;
+        inputMessage.focus();
+    }
+}
+
+
+// Anonymous meeting link functionality
+function acceptMeeting(requestId) {
+    // Remove the request from the UI
+    const requestElement = document.getElementById(`request-${requestId}`);
+    if (requestElement) {
+        requestElement.remove();
+    }
+    
+    // Open MessageBoard chat interface
+    const meetingLink = `http://localhost:8006/`;
+    window.open(meetingLink, '_blank');
+    
+    showToast('Meeting link opened! You can now chat anonymously with the requester.');
+}
+
+function declineMeeting(requestId) {
+    // Remove the request from the UI
+    const requestElement = document.getElementById(`request-${requestId}`);
+    if (requestElement) {
+        requestElement.remove();
+    }
+    
+    showToast('Request declined.');
+}
+
 // Logout functionality
 function logout() {
+    localStorage.removeItem('auth_token');
     userState = 'guest';
     currentPage = 'homepage';
     updateNavigation();
+    
+    // Hide navbar
+    document.getElementById('mainNav').classList.add('hidden');
+    
+    // Clear any success messages
+    const popup = document.getElementById('popup');
+    if (popup) {
+        popup.style.display = 'none';
+    }
+    
+    // Reset registration button text
+    const submitBtn = document.querySelector('.submit-btn');
+    if (submitBtn) {
+        submitBtn.textContent = 'Sign Up';
+        submitBtn.style.background = '';
+    }
+    
     showPage('homepage');
     showPopup('Logged Out', 'You have been successfully logged out.');
 }
@@ -886,4 +1122,19 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeMedicalRequest();
     renderRequests();
     updateNavigation();
+    
+    // Initialize chatbot event listeners
+    const sendBtn = document.getElementById('sendBtn');
+    const inputMessage = document.getElementById('inputMessage');
+    
+    if (sendBtn) {
+        sendBtn.addEventListener('click', sendMessage);
+    }
+    
+    if (inputMessage) {
+        inputMessage.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+    }
+    
 });

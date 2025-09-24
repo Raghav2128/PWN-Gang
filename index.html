@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MedShare - Complete Platform</title>
+    <title>Pulse - Complete Platform</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -12,7 +12,7 @@
     <nav class="main-nav" id="mainNav">
         <div class="nav-container">
             <div class="nav-brand">
-                <h1>MedShare</h1>
+                <h1>Pulse</h1>
             </div>
             <div class="nav-menu" id="navMenu">
                 <button class="nav-btn" onclick="showPage('homepage')">Home</button>
@@ -33,7 +33,7 @@
             <!-- Brand Panel -->
             <div class="brand-panel">
                 <div class="brand-content">
-                    <h1>MedShare</h1>
+                    <h1>Pulse</h1>
                     <p>Anonymous medicine sharing platform designed specifically for university students living in dormitories.</p>
                     
                     <ul class="features">
@@ -87,7 +87,7 @@
         <div class="container">
             <div class="header">
                 <div class="logo">🏠</div>
-                <h1>Welcome to MedShare</h1>
+                <h1>Welcome to Pulse</h1>
                 <p class="subtitle">Your medicine sharing platform</p>
             </div>
             <div class="main-content">
@@ -110,7 +110,7 @@
                     <div class="feature-card">
                         <h3>🤖 Interact with our Chatbot</h3>
                         <p>Get instant help and medical advice from our AI assistant</p>
-                        <button class="feature-btn" onclick="showPopup('Coming Soon', 'Chatbot functionality will be available soon!')">Open Chatbot</button>
+                        <button class="feature-btn" onclick="openChatbot()">Open Chatbot</button>
                     </div>
                 </div>
             </div>
@@ -280,7 +280,7 @@
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>👨‍⚕️ Preference</label>
+                            <label>👨‍⚕️ Preference (Who would you like to send a request to?)</label>
                             <div class="checkbox-group">
                                 <div class="checkbox-item">
                                     <input type="checkbox" id="male" name="preference" />
@@ -390,6 +390,7 @@
 
 
 
+
     <!-- Toast Notification -->
     <div class="toast" id="toast"></div>
 
@@ -405,6 +406,21 @@
             </div>
             <div class="popup-footer">
                 <button class="popup-btn" onclick="closePopup()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chatbot Modal -->
+    <div id="chatbotModal" class="chatbot-modal">
+        <div class="chatbot-header">
+            <h3>🤖 Pulse AI Assistant</h3>
+            <button class="chatbot-close" onclick="closeChatbot()">&times;</button>
+        </div>
+        <div class="chatbot-body">
+            <div id="chatbox" class="chatbox"></div>
+            <div class="chatbot-input-container">
+                <input type="text" id="inputMessage" placeholder="Type your message here..." />
+                <button id="sendBtn" onclick="sendMessage()">Send</button>
             </div>
         </div>
     </div>

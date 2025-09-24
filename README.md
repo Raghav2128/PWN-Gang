@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🌐 Pulse: Medicine Sharing for College Dorms 💊🏠  
 
 ## What is Pulse?  
@@ -54,3 +55,6 @@ This makes care:
 - Comforting – You know your dorm community has your back.
 
 With Pulse, a healthier, more connected campus is only one request away.  
+=======
+# PWN-Gang
+>>>>>>> backendissues
